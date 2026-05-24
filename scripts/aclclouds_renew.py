@@ -344,17 +344,20 @@ def wrap_text(text: str, width: int) -> list[str]:
 
 
 def notify_success(info: ServerInfo, renew_result: Dict[str, Any]) -> None:
+    response_preview = json.dumps(renew_result, ensure_ascii=False)[:1200]
     message = "\n".join(
         [
-            "ACLClouds renewal succeeded.",
-            f"Server: {info.name}",
-            f"Server ID: {info.server_id}",
-            f"Plan: {info.plan_name}",
-            f"Type: {info.service_type}",
-            f"Server Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-            f"Expires At: {info.expires_at or 'unlimited'}",
-            f"Remaining: {info.remaining}",
-            f"Response: {json.dumps(renew_result, ensure_ascii=False)[:1200]}",
+            "ACLClouds 续期成功",
+            "",
+            f"服务器: {info.name}",
+            f"服务器ID: {info.server_id}",
+            f"套餐: {info.plan_name}",
+            f"类型: {info.service_type}",
+            f"检查时间: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"到期时间: {info.expires_at or '无限制'}",
+            f"剩余时间: {info.remaining}",
+            "",
+            f"接口返回: {response_preview}",
         ]
     )
     send_telegram_message(message)
@@ -363,16 +366,18 @@ def notify_success(info: ServerInfo, renew_result: Dict[str, Any]) -> None:
 def notify_status(info: ServerInfo, detail: str) -> None:
     message = "\n".join(
         [
-            "ACLClouds renewal check completed.",
-            "Result: renewal not available yet",
-            f"Server: {info.name}",
-            f"Server ID: {info.server_id}",
-            f"Plan: {info.plan_name}",
-            f"Type: {info.service_type}",
-            f"Can Renew: {info.can_renew}",
-            f"Expires At: {info.expires_at or 'unlimited'}",
-            f"Remaining: {info.remaining}",
-            f"Detail: {detail}",
+            "ACLClouds 续期检查完成",
+            "",
+            "结果: 当前还不能续期",
+            f"服务器: {info.name}",
+            f"服务器ID: {info.server_id}",
+            f"套餐: {info.plan_name}",
+            f"类型: {info.service_type}",
+            f"允许续期: {'是' if info.can_renew else '否'}",
+            f"到期时间: {info.expires_at or '无限制'}",
+            f"剩余时间: {info.remaining}",
+            "",
+            f"说明: {detail}",
         ]
     )
     send_telegram_message(message)
@@ -381,15 +386,17 @@ def notify_status(info: ServerInfo, detail: str) -> None:
 def notify_failure(step: str, detail: str, payload: Optional[Dict[str, Any]] = None) -> None:
     payload = payload or {}
     create_failure_image(step, detail, payload)
-    send_telegram_photo(SCREENSHOT_PATH, f"ACLClouds renewal failed\nStep: {step}\nDetail: {detail}")
-    send_telegram_document(LOG_PATH, f"renew.log - failed at {step}")
+    send_telegram_photo(SCREENSHOT_PATH, f"ACLClouds 续期失败\n步骤: {step}\n说明: {detail}")
+    send_telegram_document(LOG_PATH, f"renew.log - 失败步骤: {step}")
     send_telegram_message(
         "\n".join(
             [
-                "ACLClouds renewal failed.",
-                f"Step: {step}",
-                f"Detail: {detail}",
-                f"Payload: {json.dumps(payload, ensure_ascii=False)[:1500]}",
+                "ACLClouds 续期失败",
+                "",
+                f"失败步骤: {step}",
+                f"错误说明: {detail}",
+                "",
+                f"详细信息: {json.dumps(payload, ensure_ascii=False)[:1500]}",
             ]
         )
     )
