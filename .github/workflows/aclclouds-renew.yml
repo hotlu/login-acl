@@ -1,0 +1,45 @@
+name: ACLClouds Renew Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */2 * * *"
+
+jobs:
+  renew-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ACL_BASE_URL: https://dash.aclclouds.com
+      ACL_SERVER_ID: ${{ secrets.ACL_SERVER_ID }}
+      ACL_COOKIE: ${{ secrets.ACL_COOKIE }}
+      ACL_ACCOUNT_LOGIN: ${{ secrets.ACL_ACCOUNT_LOGIN }}
+      ACL_ACCOUNT_PASSWORD: ${{ secrets.ACL_ACCOUNT_PASSWORD }}
+      TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      ACL_ARTIFACT_DIR: artifacts
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pillow
+
+      - name: Run renewal check
+        run: python scripts/aclclouds_renew.py
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aclclouds-renew-artifacts
+          path: artifacts/
+          if-no-files-found: ignore
