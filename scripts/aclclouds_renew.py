@@ -99,6 +99,7 @@ def request_json(
     *,
     expected: Optional[tuple[int, ...]] = None,
     allow_error_json: bool = False,
+    return_status: bool = False,
     **kwargs: Any,
 ) -> Any:
     response = session.request(method, url, timeout=TIMEOUT, **kwargs)
@@ -111,13 +112,13 @@ def request_json(
         body = response.text
     if expected and response.status_code not in expected:
         if allow_error_json:
-            return response.status_code, body
+            return (response.status_code, body) if return_status else body
         raise StepError(
             "http_request",
             f"Unexpected status {response.status_code} for {method} {url}",
             {"status": response.status_code, "body": body},
         )
-    return body
+    return (response.status_code, body) if return_status else body
 
 
 def login_with_password(session: requests.Session) -> None:
@@ -167,6 +168,7 @@ def fetch_server(session: requests.Session) -> ServerInfo:
         "GET",
         f"{BASE_URL}/api/client/servers/{SERVER_ID}",
         allow_error_json=True,
+        return_status=True,
     )
 
     if status in (401, 403, 419):
@@ -221,6 +223,7 @@ def renew_server(session: requests.Session) -> Dict[str, Any]:
         "POST",
         f"{BASE_URL}/api/client/servers/{SERVER_ID}/upgrade/renew",
         allow_error_json=True,
+        return_status=True,
         json={},
     )
 
