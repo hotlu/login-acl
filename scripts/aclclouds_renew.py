@@ -351,9 +351,28 @@ def notify_success(info: ServerInfo, renew_result: Dict[str, Any]) -> None:
             f"Server ID: {info.server_id}",
             f"Plan: {info.plan_name}",
             f"Type: {info.service_type}",
+            f"Server Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
             f"Expires At: {info.expires_at or 'unlimited'}",
             f"Remaining: {info.remaining}",
             f"Response: {json.dumps(renew_result, ensure_ascii=False)[:1200]}",
+        ]
+    )
+    send_telegram_message(message)
+
+
+def notify_status(info: ServerInfo, detail: str) -> None:
+    message = "\n".join(
+        [
+            "ACLClouds renewal check completed.",
+            "Result: renewal not available yet",
+            f"Server: {info.name}",
+            f"Server ID: {info.server_id}",
+            f"Plan: {info.plan_name}",
+            f"Type: {info.service_type}",
+            f"Can Renew: {info.can_renew}",
+            f"Expires At: {info.expires_at or 'unlimited'}",
+            f"Remaining: {info.remaining}",
+            f"Detail: {detail}",
         ]
     )
     send_telegram_message(message)
@@ -409,7 +428,9 @@ def run() -> int:
     )
 
     if not info.can_renew:
-        log(f"Renewal not open yet. Remaining time: {info.remaining}.")
+        detail = f"Renewal not open yet. Remaining time: {info.remaining}."
+        log(detail)
+        notify_status(info, detail)
         return 0
 
     result = renew_server(session)
@@ -425,6 +446,15 @@ def main() -> int:
     except StepError as exc:
         if exc.step == "not_ready":
             log(exc.message)
+            try:
+                ensure_dirs()
+                session = build_session()
+                apply_cookie_string(session, COOKIE_STRING)
+                update_xsrf_header(session)
+                info = fetch_server(session)
+                notify_status(info, exc.message)
+            except Exception as notify_exc:
+                log(f"Status notification fallback failed: {notify_exc}")
             return 0
         log(f"Failure at step={exc.step}: {exc.message}")
         if exc.payload:
